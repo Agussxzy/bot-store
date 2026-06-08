@@ -2,6 +2,7 @@ const { User, Product, Transaction } = require('../models');
 const { Op } = require('sequelize');
 const { adminMenuKeyboard, adminProductManageKeyboard, adminUserManageKeyboard, adminUserActionKeyboard } = require('../keyboards/adminMenu');
 const { formatRupiah, formatDate } = require('../utils/formatter');
+const { formatSizeTable } = require('../utils/doSizes');
 const userService = require('../services/userService');
 const logger = require('../utils/logger');
 const moment = require('moment-timezone');
@@ -93,13 +94,19 @@ Panel 1GB|1024|50|1024|15000`;
 }
 
 async function handleAdminVpsAdd(bot, chatId, messageId) {
+  const ref = formatSizeTable();
   const text = `\u{2795} Tambah VPS Baru
 
-Silakan kirim data VPS dengan format:
-Nama|size_slug|harga|vcpus|ram_display|disk_display|transfer
+Format: Nama|size_slug|harga|vcpus|ram_display|disk_display|transfer
 
 Contoh:
-VPS 1GB|s-1vcpu-1gb|15000|1|1024|25|1`;
+\`VPS 1GB|s-1vcpu-1gb|15000|1|1024|25|1\`
+
+\u{1F4CB} Referensi spesifikasi DigitalOcean:
+
+${ref}
+
+Gunakan \`size_slug\` dari tabel di atas.`;
 
   await bot.editMessageText(text, {
     chat_id: chatId, message_id: messageId,

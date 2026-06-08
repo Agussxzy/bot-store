@@ -1,4 +1,5 @@
 const { mainMenuKeyboard } = require('../keyboards/mainMenu');
+const { formatRupiah } = require('../utils/formatter');
 const userService = require('../services/userService');
 const logger = require('../utils/logger');
 
@@ -9,11 +10,21 @@ async function handleStart(bot, msg) {
     const username = msg.from.username || null;
     const name = msg.from.first_name || 'User';
 
-    await userService.findOrCreateUser(telegramId, username, name);
+    const user = await userService.findOrCreateUser(telegramId, username, name);
 
-    const welcomeText = '\u{1F3E0} Selamat Datang di Panel Shop Bot\n\nSilakan pilih menu berikut:';
+    const text = `\u{1F3EA} Panel Shop
+\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}
+\u{1F44B} Selamat datang, ${user.name || user.telegram_id}!
 
-    await bot.sendMessage(chatId, welcomeText, {
+\u{1F4CB} Informasi Akun
+  \u{1F194} ID : \`${user.telegram_id}\`
+  \u{1F517} Username : @${user.username || '-'}
+  \u{1F4B0} Saldo : ${formatRupiah(user.balance)}
+\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}
+Silakan pilih layanan:`;
+
+    await bot.sendMessage(chatId, text, {
+      parse_mode: 'Markdown',
       reply_markup: mainMenuKeyboard(),
     });
   } catch (error) {
@@ -21,15 +32,23 @@ async function handleStart(bot, msg) {
   }
 }
 
-async function handleHome(bot, chatId, messageId) {
+async function handleHome(bot, chatId, messageId, user) {
   try {
-    const welcomeText = `\u{1F3E0} Selamat Datang di Panel Shop Bot
+    const text = `\u{1F3EA} Panel Shop
+\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}
+\u{1F44B} Selamat datang, ${user.name || user.telegram_id}!
 
-Silakan pilih menu berikut:`;
+\u{1F4CB} Informasi Akun
+  \u{1F194} ID : \`${user.telegram_id}\`
+  \u{1F517} Username : @${user.username || '-'}
+  \u{1F4B0} Saldo : ${formatRupiah(user.balance)}
+\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}\u{2501}
+Silakan pilih layanan:`;
 
-    await bot.editMessageText(welcomeText, {
+    await bot.editMessageText(text, {
       chat_id: chatId,
       message_id: messageId,
+      parse_mode: 'Markdown',
       reply_markup: mainMenuKeyboard(),
     });
   } catch (error) {

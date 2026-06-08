@@ -169,7 +169,7 @@ bot.on('callback_query', async (query) => {
 
     switch (data) {
       case 'home':
-        await handleHome(bot, chatId, messageId);
+        await handleHome(bot, chatId, messageId, user);
         break;
 
       case 'help':

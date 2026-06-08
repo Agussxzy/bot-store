@@ -17,6 +17,9 @@ const {
   handleAdminUsers, handleAdminUserAction,
   handleAdminTransactions,
 } = require('./handlers/admin');
+const {
+  handleBroadcastInit, handleBroadcastConfirm, handleBroadcastStart,
+} = require('./handlers/broadcast');
 
 const token = process.env.BOT_TOKEN;
 if (!token) {
@@ -52,7 +55,7 @@ bot.onText(/\/admin/, async (msg) => {
 });
 
 bot.on('message', async (msg) => {
-  if (!msg.text || msg.text.startsWith('/')) return;
+  if (msg.text && msg.text.startsWith('/')) return;
 
   const chatId = msg.chat.id;
   const telegramId = msg.from.id;
@@ -61,6 +64,8 @@ bot.on('message', async (msg) => {
 
   if (state) {
     adminInputState.delete(stateKey);
+
+    if (state.action !== 'broadcast_content' && !msg.text) return;
 
     if (state.action === 'add_product') {
       await handleAdminProductAddInput(bot, msg, state);
@@ -124,6 +129,14 @@ bot.on('message', async (msg) => {
           ],
         },
       });
+      return;
+    }
+
+    if (state.action === 'broadcast_content') {
+      const fromChatId = msg.chat.id;
+      const msgId = msg.message_id;
+      adminInputState.set(stateKey, { action: 'broadcast_confirm', fromChatId, msgId });
+      await handleBroadcastConfirm(bot, chatId, fromChatId, msgId);
       return;
     }
   }
@@ -204,6 +217,12 @@ bot.on('callback_query', async (query) => {
           chat_id: chatId, message_id: messageId,
           reply_markup: { inline_keyboard: [[{ text: '\u{1F519} Batal', callback_data: 'admin_users_0' }]] },
         });
+        break;
+
+      case 'admin_broadcast':
+        if (!isAdminUser) break;
+        adminInputState.set(`${chatId}_${telegramId}`, { action: 'broadcast_content' });
+        await handleBroadcastInit(bot, chatId, messageId);
         break;
 
       default:
@@ -327,6 +346,23 @@ Bergabung: ${formatDate(targetUser.created_at)}`;
       chat_id: chatId, message_id: messageId,
       reply_markup: (require('./keyboards/adminMenu')).adminUserActionKeyboard(targetId),
     });
+    return;
+  }
+
+  if (data === 'admin_broadcast_cancel') {
+    if (!isAdminUser) return;
+    adminInputState.delete(`${chatId}_${telegramId}`);
+    await handleAdminMenu(bot, chatId, messageId);
+    return;
+  }
+
+  if (data === 'admin_broadcast_confirm_yes') {
+    if (!isAdminUser) return;
+    const stateKey = `${chatId}_${telegramId}`;
+    const state = adminInputState.get(stateKey);
+    if (!state || state.action !== 'broadcast_confirm') return;
+    adminInputState.delete(stateKey);
+    await handleBroadcastStart(bot, chatId, messageId, state.fromChatId, state.msgId);
     return;
   }
 }

@@ -42,11 +42,16 @@ All callback_data strings are routed in `bot.js` switch + `handleCallbackData()`
 | `admin_user_addbal_{id}` | `admin_user_addbal_` | add balance (sets input state) |
 | `admin_user_subbal_{id}` | `admin_user_subbal_` | sub balance (sets input state) |
 | `admin_user_search` | exact | search (sets input state) |
+| `admin_broadcast` | exact | handleBroadcastInit (sets broadcast_content state) |
+| `admin_broadcast_cancel` | exact | cancel broadcast → back to admin |
+| `admin_broadcast_confirm_yes` | exact | handleBroadcastStart (reads content from adminInputState) |
 | `admin_transactions_{page}` | `admin_transactions_` | transaction list |
 
 ### Admin text input quirk
 
-Admin actions requiring text input (add product, add/sub balance, search user) use an in-memory `Map` (`adminInputState`). The map key is `` `${chatId}_${telegramId}` ``. State is set in the callback handler and consumed in the `message` event handler. Always delete the state after consuming.
+Admin actions requiring text input (add product, add/sub balance, search user, broadcast) use an in-memory `Map` (`adminInputState`). The map key is `` `${chatId}_${telegramId}` ``. State is set in the callback handler and consumed in the `message` event handler. Always delete the state after consuming.
+
+Broadcast uses `copyMessage` API — any message the admin sends (text, photo, video, document, sticker, etc) is copied verbatim to all users. State flow: `broadcast_content` → `broadcast_confirm` (stores `fromChatId` + `msgId` for callback consumption).
 
 ## Payment flow
 

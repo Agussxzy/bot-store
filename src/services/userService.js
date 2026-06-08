@@ -64,6 +64,18 @@ async function unbanUser(userId) {
   return user;
 }
 
+async function getAllActiveTelegramIds() {
+  return User.findAll({
+    where: { is_banned: false },
+    attributes: ['telegram_id'],
+    raw: true,
+  });
+}
+
+async function countActiveUsers() {
+  return User.count({ where: { is_banned: false } });
+}
+
 async function searchUsers(query) {
   return User.findAll({
     where: {
@@ -80,4 +92,5 @@ async function searchUsers(query) {
 module.exports = {
   findOrCreateUser, getUserById, getUserByTelegramId, getAllUsers,
   addBalance, subtractBalance, banUser, unbanUser, searchUsers,
+  getAllActiveTelegramIds, countActiveUsers,
 };

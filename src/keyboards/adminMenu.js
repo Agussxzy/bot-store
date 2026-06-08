@@ -5,7 +5,19 @@ function adminMenuKeyboard() {
       [{ text: '\u{1F4E6} Kelola Produk', callback_data: 'admin_products_0' }],
       [{ text: '\u{1F465} Kelola User', callback_data: 'admin_users_0' }],
       [{ text: '\u{1F4B0} Transaksi', callback_data: 'admin_transactions_0' }],
+      [{ text: '\u{1F4E2} Broadcast', callback_data: 'admin_broadcast' }],
       [{ text: '\u{1F519} Kembali', callback_data: 'home' }],
+    ],
+  };
+}
+
+function broadcastConfirmKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: '\u{2705} Kirim', callback_data: 'admin_broadcast_confirm_yes' },
+        { text: '\u{274C} Batal', callback_data: 'admin_broadcast_cancel' },
+      ],
     ],
   };
 }
@@ -55,4 +67,4 @@ function adminUserActionKeyboard(userId) {
   };
 }
 
-module.exports = { adminMenuKeyboard, adminProductManageKeyboard, adminUserManageKeyboard, adminUserActionKeyboard };
+module.exports = { adminMenuKeyboard, adminProductManageKeyboard, adminUserManageKeyboard, adminUserActionKeyboard, broadcastConfirmKeyboard };

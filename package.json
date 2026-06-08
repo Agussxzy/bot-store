@@ -1,0 +1,28 @@
+{
+  "name": "bot-panel",
+  "version": "1.0.0",
+  "description": "Telegram Pterodactyl Panel Shop Bot",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js",
+    "dev": "node --watch src/bot.js"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "pterodactyl",
+    "panel"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.17.0",
+    "dotenv": "^17.4.2",
+    "moment-timezone": "^0.6.2",
+    "node-telegram-bot-api": "^0.67.0",
+    "pakasir-sdk": "^1.0.5",
+    "qrcode": "^1.5.4",
+    "sequelize": "^6.37.8",
+    "sqlite3": "^6.0.1",
+    "uuid": "^14.0.0"
+  }
+}

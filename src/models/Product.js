@@ -27,6 +27,14 @@ const Product = sequelize.define('Product', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  type: {
+    type: DataTypes.ENUM('panel', 'vps'),
+    defaultValue: 'panel',
+  },
+  metadata: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
 }, {
   tableName: 'products',
 });

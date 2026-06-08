@@ -23,13 +23,18 @@ All callback_data strings are routed in `bot.js` switch + `handleCallbackData()`
 | `product_{id}` | `product_` | handleProductDetail |
 | `buy_{id}` | `buy_` | handleBuy |
 | `check_{invoice}` | `check_` | handleCheckPayment |
+| `vps` | exact | handleVpsList |
+| `vps_{id}` | `vps_{digit}` | handleVpsDetail |
+| `vps_buy_{id}` | `vps_buy_` | handleVpsBuyInit (sets password input state) |
+| `vps_check_{invoice}` | `vps_check_` | handleVpsCheckPayment |
 | `profile` | exact | handleProfile |
 | `history_{page}` | `history_` | handleHistory |
 | `/admin` command | exact | send admin menu (new message) |
 | `admin` | exact | handleAdminMenu |
 | `admin_stats` | exact | handleAdminStats |
 | `admin_products_{page}` | `admin_products_` | handleAdminProducts |
-| `admin_product_add` | exact | handleAdminProductAdd |
+| `admin_product_add` | exact | handleAdminProductAdd (panel) |
+| `admin_vps_add` | exact | handleAdminVpsAdd |
 | `admin_users_{page}` | `admin_users_` | handleAdminUsers |
 | `admin_user_view_{id}` | `admin_user_view_` | show user detail + actions |
 | `admin_user_ban_{id}` | `admin_user_ban_` | ban |

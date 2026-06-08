@@ -40,13 +40,13 @@ Silakan pilih menu berikut:`;
 async function handleHelp(bot, chatId, messageId) {
   const text = `\u{1F4DE} Bantuan
 
-Bot ini menjual akun panel Pterodactyl.
+Bot ini menjual akun panel Pterodactyl dan VPS DigitalOcean.
 
 Cara penggunaan:
-1. Pilih \u{1F6D2} Beli Panel
+1. Pilih \u{1F6D2} Beli Panel atau \u{1F5A5} Beli VPS
 2. Pilih paket yang tersedia
-3. Lakukan pembayaran
-4. Akun akan dikirim otomatis
+3. Lakukan pembayaran via QRIS
+4. Akun/kredensial akan dikirim otomatis
 
 Jika ada kendala, hubungi admin.`;
 

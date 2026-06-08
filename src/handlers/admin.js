@@ -78,7 +78,7 @@ async function handleAdminProducts(bot, chatId, messageId, page = 0) {
 }
 
 async function handleAdminProductAdd(bot, chatId, messageId) {
-  const text = `\u{2795} Tambah Produk Baru
+  const text = `\u{2795} Tambah Produk Panel Baru
 
 Silakan kirim data produk dengan format:
 Nama|RAM|CPU|Disk|Harga
@@ -92,27 +92,68 @@ Panel 1GB|1024|50|1024|15000`;
   });
 }
 
-async function handleAdminProductAddInput(bot, msg) {
+async function handleAdminVpsAdd(bot, chatId, messageId) {
+  const text = `\u{2795} Tambah VPS Baru
+
+Silakan kirim data VPS dengan format:
+Nama|size_slug|harga|vcpus|ram_display|disk_display|transfer
+
+Contoh:
+VPS 1GB|s-1vcpu-1gb|15000|1|1024|25|1`;
+
+  await bot.editMessageText(text, {
+    chat_id: chatId, message_id: messageId,
+    reply_markup: { inline_keyboard: [[{ text: '\u{1F519} Batal', callback_data: 'admin_products_0' }]] },
+  });
+}
+
+async function handleAdminProductAddInput(bot, msg, state) {
   try {
     const chatId = msg.chat.id;
     const parts = msg.text.split('|').map(s => s.trim());
-    if (parts.length !== 5) {
-      await bot.sendMessage(chatId, '\u{274C} Format salah. Gunakan: Nama|RAM|CPU|Disk|Harga');
-      return;
+
+    if (state?.productType === 'vps') {
+      if (parts.length !== 7) {
+        await bot.sendMessage(chatId, '\u{274C} Format salah. Gunakan: Nama|size_slug|harga|vcpus|ram|disk|transfer');
+        return;
+      }
+      const [name, sizeSlug, price, vcpus, ramDisplay, diskDisplay, transfer] = parts;
+      await Product.create({
+        name,
+        type: 'vps',
+        ram: 0,
+        cpu: 0,
+        disk: 0,
+        price: parseInt(price),
+        metadata: JSON.stringify({
+          size_slug: sizeSlug,
+          vcpus: parseInt(vcpus),
+          ram_display: parseInt(ramDisplay),
+          disk_display: parseInt(diskDisplay),
+          transfer: parseFloat(transfer),
+        }),
+      });
+      await bot.sendMessage(chatId, `\u{2705} VPS "${name}" berhasil ditambahkan!`, {
+        reply_markup: { inline_keyboard: [[{ text: '\u{1F4E6} Kelola Produk', callback_data: 'admin_products_0' }]] },
+      });
+    } else {
+      if (parts.length !== 5) {
+        await bot.sendMessage(chatId, '\u{274C} Format salah. Gunakan: Nama|RAM|CPU|Disk|Harga');
+        return;
+      }
+      const [name, ram, cpu, disk, price] = parts;
+      await Product.create({
+        name,
+        type: 'panel',
+        ram: parseInt(ram),
+        cpu: parseInt(cpu),
+        disk: parseInt(disk),
+        price: parseInt(price),
+      });
+      await bot.sendMessage(chatId, `\u{2705} Produk Panel "${name}" berhasil ditambahkan!`, {
+        reply_markup: { inline_keyboard: [[{ text: '\u{1F4E6} Kelola Produk', callback_data: 'admin_products_0' }]] },
+      });
     }
-
-    const [name, ram, cpu, disk, price] = parts;
-    await Product.create({
-      name,
-      ram: parseInt(ram),
-      cpu: parseInt(cpu),
-      disk: parseInt(disk),
-      price: parseInt(price),
-    });
-
-    await bot.sendMessage(chatId, `\u{2705} Produk "${name}" berhasil ditambahkan!`, {
-      reply_markup: { inline_keyboard: [[{ text: '\u{1F4E6} Kelola Produk', callback_data: 'admin_products_0' }]] },
-    });
   } catch (error) {
     logger.error('Error adding product:', error);
   }
@@ -226,7 +267,7 @@ async function handleAdminTransactions(bot, chatId, messageId, page = 0) {
 
 module.exports = {
   isAdmin, handleAdminMenu, handleAdminStats,
-  handleAdminProducts, handleAdminProductAdd, handleAdminProductAddInput,
+  handleAdminProducts, handleAdminProductAdd, handleAdminVpsAdd, handleAdminProductAddInput,
   handleAdminUsers, handleAdminUserAction,
   handleAdminTransactions,
 };

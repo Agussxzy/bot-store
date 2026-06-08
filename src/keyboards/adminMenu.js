@@ -16,7 +16,10 @@ function adminProductManageKeyboard(page, totalPages) {
   if (page < totalPages - 1) row.push({ text: '\u{27A1}', callback_data: `admin_products_${page + 1}` });
   return {
     inline_keyboard: [
-      [{ text: '\u{2795} Tambah Produk', callback_data: 'admin_product_add' }],
+      [
+        { text: '\u{2795} Tambah Panel', callback_data: 'admin_product_add' },
+        { text: '\u{2795} Tambah VPS', callback_data: 'admin_vps_add' },
+      ],
       row.length ? row : [],
       [{ text: '\u{1F519} Kembali', callback_data: 'admin' }],
     ],

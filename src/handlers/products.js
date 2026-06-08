@@ -5,7 +5,10 @@ const logger = require('../utils/logger');
 
 async function handleProductList(bot, chatId, messageId) {
   try {
-    const products = await Product.findAll({ order: [['price', 'ASC']] });
+    const products = await Product.findAll({
+      where: { type: 'panel' },
+      order: [['price', 'ASC']],
+    });
 
     if (products.length === 0) {
       await bot.editMessageText('\u{274C} Belum ada produk tersedia.', {

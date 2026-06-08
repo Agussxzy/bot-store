@@ -40,6 +40,10 @@ const Transaction = sequelize.define('Transaction', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  metadata: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
 }, {
   tableName: 'transactions',
 });

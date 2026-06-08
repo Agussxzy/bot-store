@@ -10,9 +10,10 @@ const { handleStart, handleHome, handleHelp } = require('./handlers/start');
 const { handleProductList, handleProductDetail } = require('./handlers/products');
 const { handleBuy, handleCheckPayment } = require('./handlers/purchase');
 const { handleProfile, handleHistory } = require('./handlers/profile');
+const { handleVpsList, handleVpsDetail, handleVpsBuyInit, handleVpsBuyPassword, handleVpsCheckPayment } = require('./handlers/vps');
 const {
   isAdmin, handleAdminMenu, handleAdminStats,
-  handleAdminProducts, handleAdminProductAdd, handleAdminProductAddInput,
+  handleAdminProducts, handleAdminProductAdd, handleAdminVpsAdd, handleAdminProductAddInput,
   handleAdminUsers, handleAdminUserAction,
   handleAdminTransactions,
 } = require('./handlers/admin');
@@ -26,6 +27,7 @@ if (!token) {
 const bot = new TelegramBot(token, { polling: true });
 
 const adminInputState = new Map();
+const vpsInputState = new Map();
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
@@ -61,7 +63,7 @@ bot.on('message', async (msg) => {
     adminInputState.delete(stateKey);
 
     if (state.action === 'add_product') {
-      await handleAdminProductAddInput(bot, msg);
+      await handleAdminProductAddInput(bot, msg, state);
       return;
     }
 
@@ -92,6 +94,12 @@ bot.on('message', async (msg) => {
       } catch (error) {
         await bot.sendMessage(chatId, '\u{274C} Gagal mengurangi saldo.');
       }
+      return;
+    }
+
+    if (state.action === 'vps_password') {
+      vpsInputState.delete(stateKey);
+      await handleVpsBuyPassword(bot, msg, state.user, state.productId);
       return;
     }
 
@@ -173,10 +181,20 @@ bot.on('callback_query', async (query) => {
         await handleAdminStats(bot, chatId, messageId);
         break;
 
+      case 'vps':
+        await handleVpsList(bot, chatId, messageId);
+        break;
+
       case 'admin_product_add':
         if (!isAdminUser) break;
-        adminInputState.set(`${chatId}_${telegramId}`, { action: 'add_product' });
+        adminInputState.set(`${chatId}_${telegramId}`, { action: 'add_product', productType: 'panel' });
         await handleAdminProductAdd(bot, chatId, messageId);
+        break;
+
+      case 'admin_vps_add':
+        if (!isAdminUser) break;
+        adminInputState.set(`${chatId}_${telegramId}`, { action: 'add_product', productType: 'vps' });
+        await handleAdminVpsAdd(bot, chatId, messageId);
         break;
 
       case 'admin_user_search':
@@ -213,6 +231,24 @@ async function handleCallbackData(bot, chatId, messageId, data, user, isAdminUse
   if (data.startsWith('check_')) {
     const invoice = data.split('_')[1];
     await handleCheckPayment(bot, chatId, messageId, invoice);
+    return;
+  }
+
+  if (data.startsWith('vps_')) {
+    const parts = data.split('_');
+    if (parts.length === 2) {
+      const productId = parseInt(parts[1]);
+      await handleVpsDetail(bot, chatId, messageId, productId);
+    } else if (parts[1] === 'buy') {
+      const productId = parseInt(parts[2]);
+      const result = await handleVpsBuyInit(bot, chatId, messageId, productId, telegramId);
+      if (result) {
+        vpsInputState.set(`${chatId}_${telegramId}`, { action: 'vps_password', productId: result.productId, user });
+      }
+    } else if (parts[1] === 'check') {
+      const invoice = parts.slice(2).join('_');
+      await handleVpsCheckPayment(bot, chatId, messageId, invoice);
+    }
     return;
   }
 

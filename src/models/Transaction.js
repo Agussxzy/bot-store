@@ -16,9 +16,13 @@ const Transaction = sequelize.define('Transaction', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  type: {
+    type: DataTypes.ENUM('purchase', 'topup'),
+    defaultValue: 'purchase',
+  },
   product_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
   },
   price: {
     type: DataTypes.INTEGER,

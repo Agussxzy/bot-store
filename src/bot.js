@@ -8,9 +8,9 @@ const { adminMenuKeyboard } = require('./keyboards/adminMenu');
 const { formatRupiah, formatDate } = require('./utils/formatter');
 const { handleStart, handleHome, handleHelp } = require('./handlers/start');
 const { handleProductList, handleProductDetail } = require('./handlers/products');
-const { handleBuy, handleCheckPayment } = require('./handlers/purchase');
+const { handleBuy, handleBuyWithQris, handleBuyWithBalance, handleCheckPayment } = require('./handlers/purchase');
 const { handleProfile, handleHistory } = require('./handlers/profile');
-const { handleVpsList, handleVpsDetail, handleVpsBuyInit, handleVpsBuyPassword, handleVpsCheckPayment } = require('./handlers/vps');
+const { handleVpsList, handleVpsDetail, handleVpsBuyInit, handleVpsBuyPassword, handleVpsBuyWithQris, handleVpsBuyWithBalance, handleVpsCheckPayment } = require('./handlers/vps');
 const {
   isAdmin, handleAdminMenu, handleAdminStats,
   handleAdminProducts, handleAdminProductAdd, handleAdminVpsAdd, handleAdminProductAddInput,
@@ -20,6 +20,7 @@ const {
 const {
   handleBroadcastInit, handleBroadcastConfirm, handleBroadcastStart,
 } = require('./handlers/broadcast');
+const { handleTopupInit, handleTopupAmount, handleTopupCheckPayment } = require('./handlers/topup');
 
 const token = process.env.BOT_TOKEN;
 if (!token) {
@@ -139,6 +140,16 @@ bot.on('message', async (msg) => {
       await handleBroadcastConfirm(bot, chatId, fromChatId, msgId);
       return;
     }
+
+    if (state.action === 'topup_amount') {
+      const amount = parseInt(msg.text);
+      if (isNaN(amount) || amount < 1000) {
+        await bot.sendMessage(chatId, '\u{274C} Minimal top up Rp1.000. Masukkan jumlah yang valid.');
+        return;
+      }
+      await handleTopupAmount(bot, chatId, telegramId, amount);
+      return;
+    }
   }
 });
 
@@ -198,6 +209,11 @@ bot.on('callback_query', async (query) => {
         await handleVpsList(bot, chatId, messageId);
         break;
 
+      case 'topup':
+        adminInputState.set(`${chatId}_${telegramId}`, { action: 'topup_amount' });
+        await handleTopupInit(bot, chatId, messageId);
+        break;
+
       case 'admin_product_add':
         if (!isAdminUser) break;
         adminInputState.set(`${chatId}_${telegramId}`, { action: 'add_product', productType: 'panel' });
@@ -241,15 +257,45 @@ async function handleCallbackData(bot, chatId, messageId, data, user, isAdminUse
     return;
   }
 
+  if (data.startsWith('buy_balance_')) {
+    const productId = parseInt(data.split('_')[2]);
+    await handleBuyWithBalance(bot, chatId, messageId, productId, user.id);
+    return;
+  }
+
+  if (data.startsWith('buy_qris_')) {
+    const productId = parseInt(data.split('_')[2]);
+    await handleBuyWithQris(bot, chatId, messageId, productId, user.id);
+    return;
+  }
+
   if (data.startsWith('buy_')) {
     const productId = parseInt(data.split('_')[1]);
     await handleBuy(bot, chatId, messageId, productId, user.id);
     return;
   }
 
+  if (data.startsWith('topup_check_')) {
+    const invoice = data.slice('topup_check_'.length);
+    await handleTopupCheckPayment(bot, chatId, messageId, invoice);
+    return;
+  }
+
   if (data.startsWith('check_')) {
     const invoice = data.split('_')[1];
     await handleCheckPayment(bot, chatId, messageId, invoice);
+    return;
+  }
+
+  if (data.startsWith('vps_buy_balance_')) {
+    const invoice = data.slice('vps_buy_balance_'.length);
+    await handleVpsBuyWithBalance(bot, chatId, messageId, invoice, user.id);
+    return;
+  }
+
+  if (data.startsWith('vps_buy_qris_')) {
+    const invoice = data.slice('vps_buy_qris_'.length);
+    await handleVpsBuyWithQris(bot, chatId, messageId, invoice);
     return;
   }
 

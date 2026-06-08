@@ -207,7 +207,7 @@ bot.on('callback_query', async (query) => {
         break;
 
       default:
-        await handleCallbackData(bot, chatId, messageId, data, user, isAdminUser);
+        await handleCallbackData(bot, chatId, messageId, data, user, isAdminUser, telegramId);
         break;
     }
   } catch (error) {
@@ -215,7 +215,7 @@ bot.on('callback_query', async (query) => {
   }
 });
 
-async function handleCallbackData(bot, chatId, messageId, data, user, isAdminUser) {
+async function handleCallbackData(bot, chatId, messageId, data, user, isAdminUser, telegramId) {
   if (data.startsWith('product_')) {
     const productId = parseInt(data.split('_')[1]);
     await handleProductDetail(bot, chatId, messageId, productId);

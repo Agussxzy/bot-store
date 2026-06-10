@@ -82,10 +82,12 @@ async function handleAdminProductAdd(bot, chatId, messageId) {
   const text = `\u{2795} Tambah Produk Panel Baru
 
 Silakan kirim data produk dengan format:
-Nama|RAM|CPU|Disk|Harga
+Nama|RAM|CPU|Disk|Harga|DurasiHari
+
+Durasi bersifat opsional (default 30 hari).
 
 Contoh:
-Panel 1GB|1024|50|1024|15000`;
+Panel 1GB|1024|50|1024|15000|30`;
 
   await bot.editMessageText(text, {
     chat_id: chatId, message_id: messageId,
@@ -144,11 +146,16 @@ async function handleAdminProductAddInput(bot, msg, state) {
         reply_markup: { inline_keyboard: [[{ text: '\u{1F4E6} Kelola Produk', callback_data: 'admin_products_0' }]] },
       });
     } else {
-      if (parts.length !== 5) {
-        await bot.sendMessage(chatId, '\u{274C} Format salah. Gunakan: Nama|RAM|CPU|Disk|Harga');
+      if (parts.length < 5 || parts.length > 6) {
+        await bot.sendMessage(chatId, '\u{274C} Format salah. Gunakan: Nama|RAM|CPU|Disk|Harga|DurasiHari');
         return;
       }
-      const [name, ram, cpu, disk, price] = parts;
+      const [name, ram, cpu, disk, price, durationRaw] = parts;
+      const durationDays = durationRaw ? parseInt(durationRaw) : 30;
+      if (durationDays < 1) {
+        await bot.sendMessage(chatId, '\u{274C} Durasi minimal 1 hari.');
+        return;
+      }
       await Product.create({
         name,
         type: 'panel',
@@ -156,8 +163,9 @@ async function handleAdminProductAddInput(bot, msg, state) {
         cpu: parseInt(cpu),
         disk: parseInt(disk),
         price: parseInt(price),
+        duration_days: durationDays,
       });
-      await bot.sendMessage(chatId, `\u{2705} Produk Panel "${name}" berhasil ditambahkan!`, {
+      await bot.sendMessage(chatId, `\u{2705} Produk Panel "${name}" berhasil ditambahkan! (Masa aktif: ${durationDays} hari)`, {
         reply_markup: { inline_keyboard: [[{ text: '\u{1F4E6} Kelola Produk', callback_data: 'admin_products_0' }]] },
       });
     }
@@ -272,9 +280,59 @@ async function handleAdminTransactions(bot, chatId, messageId, page = 0) {
   }
 }
 
+async function handleAdminServers(bot, chatId, messageId, page = 0) {
+  try {
+    const limit = 10;
+    const { rows, count } = await Transaction.findAndCountAll({
+      where: { status: 'success', type: 'purchase', server_id: { [Op.ne]: null } },
+      include: [User, Product],
+      order: [['expires_at', 'ASC']],
+      offset: page * limit,
+      limit,
+    });
+    const totalPages = Math.ceil(count / limit);
+
+    if (rows.length === 0) {
+      await bot.editMessageText('\u{1F4E6} Tidak ada server aktif.', {
+        chat_id: chatId, message_id: messageId,
+        reply_markup: { inline_keyboard: [[{ text: '\u{1F519} Kembali', callback_data: 'admin' }]] },
+      });
+      return;
+    }
+
+    let text = `\u{1F4E6} Server Aktif (${count} total)\n\n`;
+    for (const t of rows) {
+      const userName = t.User ? (t.User.name || t.User.username || t.User.telegram_id) : 'Unknown';
+      const productName = t.Product ? t.Product.name : 'Unknown';
+      const expires = t.expires_at ? formatDate(t.expires_at) : '-';
+      text += `${t.invoice}\n\u{1F464} ${userName} | \u{1F4E6} ${productName}\n\u{23F3} Expired: ${expires}\n\n`;
+    }
+
+    const keyboard = { inline_keyboard: [] };
+    for (const t of rows) {
+      keyboard.inline_keyboard.push([
+        { text: `\u{1F4C5} ${t.invoice}`, callback_data: `admin_extend_${t.id}` },
+      ]);
+    }
+    const navRow = [];
+    if (page > 0) navRow.push({ text: '\u{2B05}', callback_data: `admin_servers_${page - 1}` });
+    if (page < totalPages - 1) navRow.push({ text: '\u{27A1}', callback_data: `admin_servers_${page + 1}` });
+    if (navRow.length) keyboard.inline_keyboard.push(navRow);
+    keyboard.inline_keyboard.push([{ text: '\u{1F519} Kembali', callback_data: 'admin' }]);
+
+    await bot.editMessageText(text, {
+      chat_id: chatId, message_id: messageId,
+      reply_markup: keyboard,
+    });
+  } catch (error) {
+    logger.error('Error in handleAdminServers:', error);
+  }
+}
+
 module.exports = {
   isAdmin, handleAdminMenu, handleAdminStats,
   handleAdminProducts, handleAdminProductAdd, handleAdminVpsAdd, handleAdminProductAddInput,
   handleAdminUsers, handleAdminUserAction,
   handleAdminTransactions,
+  handleAdminServers,
 };

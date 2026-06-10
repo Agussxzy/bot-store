@@ -1,5 +1,5 @@
 const { User, Product, Transaction, Config } = require('../models');
-const { formatRupiah, generateInvoice, generatePassword } = require('../utils/formatter');
+const { formatRupiah, formatDate, generateInvoice, generatePassword } = require('../utils/formatter');
 const pterodactylService = require('../services/pterodactylService');
 const doService = require('../services/digitaloceanService');
 const userService = require('../services/userService');
@@ -250,9 +250,13 @@ async function createPanelServer(bot, transaction, user, product) {
   const pterodactylUser = await pterodactylService.createPterodactylUser(email, username, password);
   const server = await pterodactylService.createPterodactylServer(pterodactylUser.id, product);
 
+  const expiresAt = new Date(Date.now() + (product.duration_days || 30) * 24 * 60 * 60 * 1000);
+  const expiredText = formatDate(expiresAt);
+
   await transaction.update({
     status: 'success',
     server_id: server.id,
+    expires_at: expiresAt,
   });
 
   const panelUrl = process.env.PTERODACTYL_URL || 'https://panel.domain.com';
@@ -262,6 +266,7 @@ Email: ${email}
 Username: ${username}
 Password: ${password}
 URL Panel: ${panelUrl}
+Masa Aktif: ${expiredText}
 Invoice: ${transaction.invoice}
 
 Silakan login dan segera ganti password Anda.`;

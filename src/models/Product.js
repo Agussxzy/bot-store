@@ -27,6 +27,10 @@ const Product = sequelize.define('Product', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  duration_days: {
+    type: DataTypes.INTEGER,
+    defaultValue: 30,
+  },
   type: {
     type: DataTypes.ENUM('panel', 'vps'),
     defaultValue: 'panel',

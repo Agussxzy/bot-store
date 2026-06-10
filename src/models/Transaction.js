@@ -36,6 +36,10 @@ const Transaction = sequelize.define('Transaction', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  expires_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
   payment_method: {
     type: DataTypes.STRING,
     allowNull: true,

@@ -15,12 +15,14 @@ const {
   isAdmin, handleAdminMenu, handleAdminStats,
   handleAdminProducts, handleAdminProductAdd, handleAdminVpsAdd, handleAdminProductAddInput,
   handleAdminUsers, handleAdminUserAction,
-  handleAdminTransactions,
+  handleAdminTransactions, handleAdminServers,
 } = require('./handlers/admin');
 const {
   handleBroadcastInit, handleBroadcastConfirm, handleBroadcastStart,
 } = require('./handlers/broadcast');
 const { handleTopupInit, handleTopupAmount, handleTopupCheckPayment } = require('./handlers/topup');
+const { startExpiryChecker } = require('./services/expiryService');
+const { startBackupScheduler, handleAdminBackup, handleAdminBackupCreate, handleAdminRestoreInit, restoreFromZip } = require('./services/backupService');
 const {
   handleManualQrisPanel, handleManualQrisVps, handleUserSubmitProof,
   handleAdminManualPayments, handleAdminManualConfirm, handleAdminManualReject, handleAdminSetQris,
@@ -72,7 +74,7 @@ bot.on('message', async (msg) => {
     adminInputState.delete(stateKey);
     manualQrisState.delete(stateKey);
 
-    if (!['broadcast_content', 'manual_qris_photo', 'set_qris_photo'].includes(state.action) && !msg.text) return;
+    if (!['broadcast_content', 'manual_qris_photo', 'set_qris_photo', 'restore_backup'].includes(state.action) && !msg.text) return;
 
     if (state.action === 'add_product') {
       await handleAdminProductAddInput(bot, msg, state);
@@ -178,6 +180,44 @@ bot.on('message', async (msg) => {
       await bot.sendMessage(chatId, '\u{2705} QRIS berhasil disimpan!');
       return;
     }
+
+    if (state.action === 'restore_backup') {
+      if (!msg.document || !msg.document.file_name?.endsWith('.zip')) {
+        await bot.sendMessage(chatId, '\u{274C} Silakan kirim file backup (.zip).');
+        return;
+      }
+      await restoreFromZip(bot, chatId, msg.document.file_id);
+      return;
+    }
+
+    if (state.action === 'extend_days') {
+      const days = parseInt(msg.text);
+      if (isNaN(days) || days < 1) {
+        await bot.sendMessage(chatId, '\u{274C} Masukkan jumlah hari yang valid (minimal 1).');
+        return;
+      }
+      const { Transaction } = require('./models');
+      const tx = await Transaction.findByPk(state.txId);
+      if (!tx) {
+        await bot.sendMessage(chatId, '\u{274C} Transaksi tidak ditemukan.');
+        return;
+      }
+      const oldExpiry = tx.expires_at ? new Date(tx.expires_at) : new Date();
+      const newExpiry = new Date(oldExpiry.getTime() + days * 24 * 60 * 60 * 1000);
+      await tx.update({ expires_at: newExpiry });
+      const user = await userService.getUserById(tx.user_id);
+      if (user) {
+        try {
+          await bot.sendMessage(parseInt(user.telegram_id), `\u{2705} Server Panel Anda diperpanjang ${days} hari!\n\nInvoice: ${tx.invoice}\nExpired baru: ${formatDate(newExpiry)}`, {
+            reply_markup: { inline_keyboard: [[{ text: '\u{1F3E0} Menu Utama', callback_data: 'home' }]] },
+          });
+        } catch (err) {
+          logger.warn(`Gagal notifikasi user ${user.telegram_id}: ${err.message}`);
+        }
+      }
+      await bot.sendMessage(chatId, `\u{2705} Server diperpanjang ${days} hari! Expired baru: ${formatDate(newExpiry)}`);
+      return;
+    }
   }
 });
 
@@ -273,6 +313,22 @@ bot.on('callback_query', async (query) => {
         if (!isAdminUser) break;
         adminInputState.set(`${chatId}_${telegramId}`, { action: 'set_qris_photo' });
         await handleAdminSetQris(bot, chatId, messageId);
+        break;
+
+      case 'admin_backup':
+        if (!isAdminUser) break;
+        await handleAdminBackup(bot, chatId, messageId);
+        break;
+
+      case 'admin_backup_create':
+        if (!isAdminUser) break;
+        await handleAdminBackupCreate(bot, chatId, messageId);
+        break;
+
+      case 'admin_backup_restore':
+        if (!isAdminUser) break;
+        adminInputState.set(`${chatId}_${telegramId}`, { action: 'restore_backup' });
+        await handleAdminRestoreInit(bot, chatId, messageId);
         break;
 
       default:
@@ -413,6 +469,24 @@ async function handleCallbackData(bot, chatId, messageId, data, user, isAdminUse
     return;
   }
 
+  if (data.startsWith('admin_servers_')) {
+    if (!isAdminUser) return;
+    const page = parseInt(data.split('_')[2]) || 0;
+    await handleAdminServers(bot, chatId, messageId, page);
+    return;
+  }
+
+  if (data.startsWith('admin_extend_')) {
+    if (!isAdminUser) return;
+    const txId = parseInt(data.split('_')[2]);
+    adminInputState.set(`${chatId}_${telegramId}`, { action: 'extend_days', txId });
+    await bot.editMessageText('\u{1F4C5} Masukkan jumlah hari perpanjangan:', {
+      chat_id: chatId, message_id: messageId,
+      reply_markup: { inline_keyboard: [[{ text: '\u{1F519} Batal', callback_data: 'admin_servers_0' }]] },
+    });
+    return;
+  }
+
   if (data.startsWith('admin_user_ban_')) {
     if (!isAdminUser) return;
     const targetId = parseInt(data.split('_')[3]);
@@ -490,6 +564,9 @@ async function start() {
     const { User, Product, Transaction, Config } = require('./models/index');
     await sequelize.sync({ alter: true });
     logger.info('Database synced');
+
+    startExpiryChecker(bot);
+    startBackupScheduler(bot);
 
     logger.info('Bot started');
   } catch (error) {

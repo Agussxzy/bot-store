@@ -22,6 +22,9 @@ function vpsPaymentMethodKeyboard(invoice) {
         { text: '\u{1F4B3} Bayar via QRIS', callback_data: `vps_buy_qris_${invoice}` },
         { text: '\u{1F4B0} Bayar dengan Saldo', callback_data: `vps_buy_balance_${invoice}` },
       ],
+      [
+        { text: '\u{1F5BC} Manual QRIS', callback_data: `vps_buy_manual_${invoice}` },
+      ],
       [{ text: '\u{1F519} Batal', callback_data: 'vps' }],
     ],
   };

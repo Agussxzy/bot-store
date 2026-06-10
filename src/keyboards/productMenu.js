@@ -22,6 +22,9 @@ function paymentMethodKeyboard(productId) {
         { text: '\u{1F4B3} Bayar via QRIS', callback_data: `buy_qris_${productId}` },
         { text: '\u{1F4B0} Bayar dengan Saldo', callback_data: `buy_balance_${productId}` },
       ],
+      [
+        { text: '\u{1F5BC} Manual QRIS', callback_data: `buy_manual_${productId}` },
+      ],
       [{ text: '\u{1F519} Kembali', callback_data: 'products' }],
     ],
   };

@@ -23,12 +23,20 @@ All callback_data strings are routed in `bot.js` switch + `handleCallbackData()`
 | `product_{id}` | `product_` | handleProductDetail |
 | `buy_{id}` | `buy_` | handleBuy |
 | `check_{invoice}` | `check_` | handleCheckPayment |
+| `buy_qris_{id}` | `buy_qris_` | handleBuyWithQris |
+| `buy_balance_{id}` | `buy_balance_` | handleBuyWithBalance |
+| `buy_manual_{id}` | `buy_manual_` | handleManualQrisPanel (sets manualQrisState) |
 | `vps` | exact | handleVpsList |
 | `vps_{id}` | `vps_{digit}` | handleVpsDetail |
 | `vps_buy_{id}` | `vps_buy_` | handleVpsBuyInit (sets password input state) |
+| `vps_buy_qris_{invoice}` | `vps_buy_qris_` | handleVpsBuyWithQris |
+| `vps_buy_balance_{invoice}` | `vps_buy_balance_` | handleVpsBuyWithBalance |
+| `vps_buy_manual_{id}` | `vps_buy_manual_` | handleManualQrisVps (sets manualQrisState) |
 | `vps_check_{invoice}` | `vps_check_` | handleVpsCheckPayment |
 | `profile` | exact | handleProfile |
 | `history_{page}` | `history_` | handleHistory |
+| `topup` | exact | handleTopupInit (sets topup_amount state) |
+| `topup_check_{invoice}` | `topup_check_` | handleTopupCheckPayment |
 | `/admin` command | exact | send admin menu (new message) |
 | `admin` | exact | handleAdminMenu |
 | `admin_stats` | exact | handleAdminStats |
@@ -46,20 +54,33 @@ All callback_data strings are routed in `bot.js` switch + `handleCallbackData()`
 | `admin_broadcast_cancel` | exact | cancel broadcast → back to admin |
 | `admin_broadcast_confirm_yes` | exact | handleBroadcastStart (reads content from adminInputState) |
 | `admin_transactions_{page}` | `admin_transactions_` | transaction list |
+| `admin_manual_payments_{page}` | `admin_manual_payments_` | handleAdminManualPayments (list pending) |
+| `admin_manual_confirm_{txId}` | `admin_manual_confirm_` | handleAdminManualConfirm |
+| `admin_manual_reject_{txId}` | `admin_manual_reject_` | handleAdminManualReject |
 
 ### Admin text input quirk
 
-Admin actions requiring text input (add product, add/sub balance, search user, broadcast) use an in-memory `Map` (`adminInputState`). The map key is `` `${chatId}_${telegramId}` ``. State is set in the callback handler and consumed in the `message` event handler. Always delete the state after consuming.
+Admin actions requiring text input (add product, add/sub balance, search user, broadcast, topup) use an in-memory `Map` (`adminInputState`). The map key is `` `${chatId}_${telegramId}` ``. State is set in the callback handler and consumed in the `message` event handler. Always delete the state after consuming.
+
+Additional state maps:
+- `vpsInputState`: stores VPS password requests (`vps_password` action)
+- `manualQrisState`: stores manual QRIS photo upload requests (`manual_qris_photo` action)
+
+The `message` handler checks both `adminInputState` and `manualQrisState`, deleting from whichever map the state was found.
 
 Broadcast uses `copyMessage` API — any message the admin sends (text, photo, video, document, sticker, etc) is copied verbatim to all users. State flow: `broadcast_content` → `broadcast_confirm` (stores `fromChatId` + `msgId` for callback consumption).
 
+Non-text messages are allowed for `broadcast_content` and `manual_qris_photo` states.
+
 ## Payment flow
 
-1. User clicks `buy_{id}` → transaction created (`status: pending`) → Pakasir `createPayment('qris', ...)` → QR code image sent directly to chat
-2. `check_{invoice}` callback checks real status via Pakasir `detailPayment()`
-3. If `completed`: create Pterodactyl user → create server → update transaction → send credentials
-4. Pakasir SDK config: `PAKASIR_SLUG` + `PAKASIR_APIKEY` in `.env`
-5. QR generation uses `qrcode` npm package — generates PNG buffer from `payment_url`
+1. User can choose payment method: QRIS (Pakasir), Balance (saldo), or Manual QRIS (upload proof)
+2. **QRIS**: User clicks QRIS → transaction created (`status: pending`) → Pakasir `createPayment('qris', ...)` → QR code image sent directly to chat → `check_*` callback polls real status
+3. **Balance**: User clicks Bayar dengan Saldo → checks sufficient balance → deducts → transaction created as `paid` → creates server immediately
+4. **Manual QRIS**: User clicks Manual QRIS → uploads proof photo → forwarded to admin with confirm/reject buttons → admin clicks confirm → transaction `paid` → creates server
+5. Pakasir SDK config: `PAKASIR_SLUG` + `PAKASIR_APIKEY` in `.env`
+6. QR generation uses `qrcode` npm package — generates PNG buffer from `payment_url`
+7. **Top-up**: User clicks Top Up → enters amount → QRIS payment created → `topup_check_*` callback → on `completed` adds to user balance
 
 ## Pterodactyl API docs
 

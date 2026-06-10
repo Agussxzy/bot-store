@@ -5,8 +5,22 @@ function adminMenuKeyboard() {
       [{ text: '\u{1F4E6} Kelola Produk', callback_data: 'admin_products_0' }],
       [{ text: '\u{1F465} Kelola User', callback_data: 'admin_users_0' }],
       [{ text: '\u{1F4B0} Transaksi', callback_data: 'admin_transactions_0' }],
+      [{ text: '\u{1F4E9} Konfirmasi Manual', callback_data: 'admin_manual_payments_0' }],
+      [{ text: '\u{1F4F7} Set QRIS', callback_data: 'admin_set_qris' }],
       [{ text: '\u{1F4E2} Broadcast', callback_data: 'admin_broadcast' }],
       [{ text: '\u{1F519} Kembali', callback_data: 'home' }],
+    ],
+  };
+}
+
+function adminManualPaymentsKeyboard(page, totalPages) {
+  const row = [];
+  if (page > 0) row.push({ text: '\u{2B05}', callback_data: `admin_manual_payments_${page - 1}` });
+  if (page < totalPages - 1) row.push({ text: '\u{27A1}', callback_data: `admin_manual_payments_${page + 1}` });
+  return {
+    inline_keyboard: [
+      row.length ? row : [],
+      [{ text: '\u{1F519} Kembali', callback_data: 'admin' }],
     ],
   };
 }
@@ -67,4 +81,4 @@ function adminUserActionKeyboard(userId) {
   };
 }
 
-module.exports = { adminMenuKeyboard, adminProductManageKeyboard, adminUserManageKeyboard, adminUserActionKeyboard, broadcastConfirmKeyboard };
+module.exports = { adminMenuKeyboard, adminProductManageKeyboard, adminUserManageKeyboard, adminUserActionKeyboard, broadcastConfirmKeyboard, adminManualPaymentsKeyboard };

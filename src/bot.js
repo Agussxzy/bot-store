@@ -21,6 +21,10 @@ const {
   handleBroadcastInit, handleBroadcastConfirm, handleBroadcastStart,
 } = require('./handlers/broadcast');
 const { handleTopupInit, handleTopupAmount, handleTopupCheckPayment } = require('./handlers/topup');
+const {
+  handleManualQrisPanel, handleManualQrisVps, handleUserSubmitProof,
+  handleAdminManualPayments, handleAdminManualConfirm, handleAdminManualReject, handleAdminSetQris,
+} = require('./handlers/manualQris');
 
 const token = process.env.BOT_TOKEN;
 if (!token) {
@@ -32,6 +36,7 @@ const bot = new TelegramBot(token, { polling: true });
 
 const adminInputState = new Map();
 const vpsInputState = new Map();
+const manualQrisState = new Map();
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
@@ -61,12 +66,13 @@ bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const telegramId = msg.from.id;
   const stateKey = `${chatId}_${telegramId}`;
-  const state = adminInputState.get(stateKey);
+  let state = adminInputState.get(stateKey) || manualQrisState.get(stateKey);
 
   if (state) {
     adminInputState.delete(stateKey);
+    manualQrisState.delete(stateKey);
 
-    if (state.action !== 'broadcast_content' && !msg.text) return;
+    if (!['broadcast_content', 'manual_qris_photo', 'set_qris_photo'].includes(state.action) && !msg.text) return;
 
     if (state.action === 'add_product') {
       await handleAdminProductAddInput(bot, msg, state);
@@ -148,6 +154,28 @@ bot.on('message', async (msg) => {
         return;
       }
       await handleTopupAmount(bot, chatId, telegramId, amount);
+      return;
+    }
+
+    if (state.action === 'manual_qris_photo') {
+      if (!msg.photo) {
+        await bot.sendMessage(chatId, '\u{274C} Silakan kirim foto bukti transfer.');
+        return;
+      }
+      manualQrisState.delete(stateKey);
+      await handleUserSubmitProof(bot, msg, state);
+      return;
+    }
+
+    if (state.action === 'set_qris_photo') {
+      if (!msg.photo) {
+        await bot.sendMessage(chatId, '\u{274C} Silakan kirim foto QRIS.');
+        return;
+      }
+      const fileId = msg.photo[msg.photo.length - 1].file_id;
+      const { Config } = require('./models');
+      await Config.upsert({ key: 'manual_qris_file_id', value: fileId });
+      await bot.sendMessage(chatId, '\u{2705} QRIS berhasil disimpan!');
       return;
     }
   }
@@ -241,6 +269,12 @@ bot.on('callback_query', async (query) => {
         await handleBroadcastInit(bot, chatId, messageId);
         break;
 
+      case 'admin_set_qris':
+        if (!isAdminUser) break;
+        adminInputState.set(`${chatId}_${telegramId}`, { action: 'set_qris_photo' });
+        await handleAdminSetQris(bot, chatId, messageId);
+        break;
+
       default:
         await handleCallbackData(bot, chatId, messageId, data, user, isAdminUser, telegramId);
         break;
@@ -254,6 +288,13 @@ async function handleCallbackData(bot, chatId, messageId, data, user, isAdminUse
   if (data.startsWith('product_')) {
     const productId = parseInt(data.split('_')[1]);
     await handleProductDetail(bot, chatId, messageId, productId);
+    return;
+  }
+
+  if (data.startsWith('buy_manual_')) {
+    const productId = parseInt(data.split('_')[2]);
+    manualQrisState.set(`${chatId}_${telegramId}`, { action: 'manual_qris_photo', type: 'panel', productId, userId: user.id });
+    await handleManualQrisPanel(bot, chatId, messageId, productId, user.id);
     return;
   }
 
@@ -272,6 +313,34 @@ async function handleCallbackData(bot, chatId, messageId, data, user, isAdminUse
   if (data.startsWith('buy_')) {
     const productId = parseInt(data.split('_')[1]);
     await handleBuy(bot, chatId, messageId, productId, user.id);
+    return;
+  }
+
+  if (data.startsWith('vps_buy_manual_')) {
+    const invoice = data.slice('vps_buy_manual_'.length);
+    manualQrisState.set(`${chatId}_${telegramId}`, { action: 'manual_qris_photo', type: 'vps', invoice });
+    await handleManualQrisVps(bot, chatId, invoice);
+    return;
+  }
+
+  if (data.startsWith('admin_manual_payments_')) {
+    if (!isAdminUser) return;
+    const page = parseInt(data.split('_')[3]) || 0;
+    await handleAdminManualPayments(bot, chatId, messageId, page);
+    return;
+  }
+
+  if (data.startsWith('admin_manual_confirm_')) {
+    if (!isAdminUser) return;
+    const invoice = data.slice('admin_manual_confirm_'.length);
+    await handleAdminManualConfirm(bot, chatId, messageId, invoice);
+    return;
+  }
+
+  if (data.startsWith('admin_manual_reject_')) {
+    if (!isAdminUser) return;
+    const invoice = data.slice('admin_manual_reject_'.length);
+    await handleAdminManualReject(bot, chatId, messageId, invoice);
     return;
   }
 

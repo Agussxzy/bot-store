@@ -7,6 +7,7 @@ function adminMenuKeyboard() {
       [{ text: '\u{1F4B0} Transaksi', callback_data: 'admin_transactions_0' }],
       [{ text: '\u{1F4E6} Servers', callback_data: 'admin_servers_0' }],
       [{ text: '\u{1F4E9} Konfirmasi Manual', callback_data: 'admin_manual_payments_0' }],
+      [{ text: '\u{2699} Metode Pembayaran', callback_data: 'admin_payment_methods' }],
       [{ text: '\u{1F4F7} Set QRIS', callback_data: 'admin_set_qris' }],
       [{ text: '\u{1F4BE} Backup', callback_data: 'admin_backup' }],
       [{ text: '\u{1F4E2} Broadcast', callback_data: 'admin_broadcast' }],

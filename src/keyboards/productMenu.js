@@ -15,19 +15,17 @@ function productDetailKeyboard(productId) {
   };
 }
 
-function paymentMethodKeyboard(productId) {
-  return {
-    inline_keyboard: [
-      [
-        { text: '\u{1F4B3} Bayar via QRIS', callback_data: `buy_qris_${productId}` },
-        { text: '\u{1F4B0} Bayar dengan Saldo', callback_data: `buy_balance_${productId}` },
-      ],
-      [
-        { text: '\u{1F5BC} Manual QRIS', callback_data: `buy_manual_${productId}` },
-      ],
-      [{ text: '\u{1F519} Kembali', callback_data: 'products' }],
-    ],
-  };
+async function paymentMethodKeyboard(productId) {
+  const { getConfig } = require('../services/paymentService');
+  const raw = await getConfig('payment_methods');
+  const methods = raw ? JSON.parse(raw) : { qris: true, balance: true, manual_qris: true };
+
+  const rows = [];
+  if (methods.qris) rows.push([{ text: '\u{1F4B3} Bayar via QRIS', callback_data: `buy_qris_${productId}` }]);
+  if (methods.balance) rows.push([{ text: '\u{1F4B0} Bayar dengan Saldo', callback_data: `buy_balance_${productId}` }]);
+  if (methods.manual_qris) rows.push([{ text: '\u{1F5BC} Manual QRIS', callback_data: `buy_manual_${productId}` }]);
+  if (rows.length) rows.push([{ text: '\u{1F519} Kembali', callback_data: 'products' }]);
+  return { inline_keyboard: rows };
 }
 
 function paymentQrKeyboard(invoice) {

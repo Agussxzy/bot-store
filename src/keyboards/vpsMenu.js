@@ -15,19 +15,17 @@ function vpsDetailKeyboard(productId) {
   };
 }
 
-function vpsPaymentMethodKeyboard(invoice) {
-  return {
-    inline_keyboard: [
-      [
-        { text: '\u{1F4B3} Bayar via QRIS', callback_data: `vps_buy_qris_${invoice}` },
-        { text: '\u{1F4B0} Bayar dengan Saldo', callback_data: `vps_buy_balance_${invoice}` },
-      ],
-      [
-        { text: '\u{1F5BC} Manual QRIS', callback_data: `vps_buy_manual_${invoice}` },
-      ],
-      [{ text: '\u{1F519} Batal', callback_data: 'vps' }],
-    ],
-  };
+async function vpsPaymentMethodKeyboard(invoice) {
+  const { getConfig } = require('../services/paymentService');
+  const raw = await getConfig('payment_methods');
+  const methods = raw ? JSON.parse(raw) : { qris: true, balance: true, manual_qris: true };
+
+  const rows = [];
+  if (methods.qris) rows.push([{ text: '\u{1F4B3} Bayar via QRIS', callback_data: `vps_buy_qris_${invoice}` }]);
+  if (methods.balance) rows.push([{ text: '\u{1F4B0} Bayar dengan Saldo', callback_data: `vps_buy_balance_${invoice}` }]);
+  if (methods.manual_qris) rows.push([{ text: '\u{1F5BC} Manual QRIS', callback_data: `vps_buy_manual_${invoice}` }]);
+  if (rows.length) rows.push([{ text: '\u{1F519} Batal', callback_data: 'vps' }]);
+  return { inline_keyboard: rows };
 }
 
 function vpsPaymentKeyboard(invoice) {

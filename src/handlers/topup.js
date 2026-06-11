@@ -13,7 +13,7 @@ async function handleTopupInit(bot, chatId, messageId) {
   });
 }
 
-async function handleTopupAmount(bot, chatId, telegramId, amount) {
+async function handleTopupAmount(bot, chatId, telegramId, amount, userId) {
   try {
     if (isNaN(amount) || amount < 1000) {
       await bot.sendMessage(chatId, '\u{274C} Minimal top up Rp1.000. Silakan coba lagi.');
@@ -24,7 +24,7 @@ async function handleTopupAmount(bot, chatId, telegramId, amount) {
 
     await Transaction.create({
       invoice,
-      user_id: telegramId,
+      user_id: userId,
       type: 'topup',
       price: amount,
       status: 'pending',

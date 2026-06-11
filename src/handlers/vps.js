@@ -134,7 +134,7 @@ Saldo kamu: ${formatRupiah(user.balance)}
 Pilih metode pembayaran:`;
 
     await bot.sendMessage(chatId, text, {
-      reply_markup: vpsPaymentMethodKeyboard(invoice),
+      reply_markup: await vpsPaymentMethodKeyboard(invoice),
     });
 
     logger.info(`VPS transaction created: ${invoice} for user ${user.id}`);

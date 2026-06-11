@@ -35,7 +35,7 @@ Pilih metode pembayaran:`;
 
     await bot.editMessageText(text, {
       chat_id: chatId, message_id: messageId,
-      reply_markup: paymentMethodKeyboard(productId),
+      reply_markup: await paymentMethodKeyboard(productId),
     });
   } catch (error) {
     logger.error('Error in handleBuy:', error);

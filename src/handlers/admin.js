@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const { adminMenuKeyboard, adminProductManageKeyboard, adminUserManageKeyboard, adminUserActionKeyboard } = require('../keyboards/adminMenu');
 const { formatRupiah, formatDate } = require('../utils/formatter');
 const { formatSizeTable } = require('../utils/doSizes');
+const { getConfig, setConfig } = require('../services/paymentService');
 const userService = require('../services/userService');
 const logger = require('../utils/logger');
 const moment = require('moment-timezone');
@@ -329,10 +330,49 @@ async function handleAdminServers(bot, chatId, messageId, page = 0) {
   }
 }
 
+async function handleAdminPaymentMethods(bot, chatId, messageId) {
+  const raw = await getConfig('payment_methods');
+  const methods = raw ? JSON.parse(raw) : { qris: true, balance: true, manual_qris: true };
+
+  const methodNames = {
+    qris: 'QRIS (Pakasir)',
+    balance: 'Saldo',
+    manual_qris: 'Manual QRIS',
+  };
+
+  let text = '\u{2699} Metode Pembayaran\n\n';
+  for (const [key, name] of Object.entries(methodNames)) {
+    text += `${methods[key] ? '\u{2705}' : '\u{274C}'} ${name}\n`;
+  }
+  text += '\nKlik metode di bawah untuk mengaktifkan/nonaktifkan:';
+
+  const keyboard = { inline_keyboard: [] };
+  for (const key of Object.keys(methodNames)) {
+    keyboard.inline_keyboard.push([
+      { text: `${methods[key] ? '\u{2705}' : '\u{274C}'} ${methodNames[key]}`, callback_data: `admin_payment_toggle_${key}` },
+    ]);
+  }
+  keyboard.inline_keyboard.push([{ text: '\u{1F519} Kembali', callback_data: 'admin' }]);
+
+  await bot.editMessageText(text, {
+    chat_id: chatId, message_id: messageId,
+    reply_markup: keyboard,
+  });
+}
+
+async function handleAdminPaymentToggle(bot, chatId, messageId, method) {
+  const raw = await getConfig('payment_methods');
+  const methods = raw ? JSON.parse(raw) : { qris: true, balance: true, manual_qris: true };
+  methods[method] = !methods[method];
+  await setConfig('payment_methods', JSON.stringify(methods));
+  await handleAdminPaymentMethods(bot, chatId, messageId);
+}
+
 module.exports = {
   isAdmin, handleAdminMenu, handleAdminStats,
   handleAdminProducts, handleAdminProductAdd, handleAdminVpsAdd, handleAdminProductAddInput,
   handleAdminUsers, handleAdminUserAction,
   handleAdminTransactions,
   handleAdminServers,
+  handleAdminPaymentMethods, handleAdminPaymentToggle,
 };

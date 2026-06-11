@@ -16,6 +16,7 @@ const {
   handleAdminProducts, handleAdminProductAdd, handleAdminVpsAdd, handleAdminProductAddInput,
   handleAdminUsers, handleAdminUserAction,
   handleAdminTransactions, handleAdminServers,
+  handleAdminPaymentMethods, handleAdminPaymentToggle,
 } = require('./handlers/admin');
 const {
   handleBroadcastInit, handleBroadcastConfirm, handleBroadcastStart,
@@ -155,7 +156,7 @@ bot.on('message', async (msg) => {
         await bot.sendMessage(chatId, '\u{274C} Minimal top up Rp1.000. Masukkan jumlah yang valid.');
         return;
       }
-      await handleTopupAmount(bot, chatId, telegramId, amount);
+      await handleTopupAmount(bot, chatId, telegramId, amount, state.userId);
       return;
     }
 
@@ -278,7 +279,7 @@ bot.on('callback_query', async (query) => {
         break;
 
       case 'topup':
-        adminInputState.set(`${chatId}_${telegramId}`, { action: 'topup_amount' });
+        adminInputState.set(`${chatId}_${telegramId}`, { action: 'topup_amount', userId: user.id });
         await handleTopupInit(bot, chatId, messageId);
         break;
 
@@ -323,6 +324,11 @@ bot.on('callback_query', async (query) => {
       case 'admin_backup_create':
         if (!isAdminUser) break;
         await handleAdminBackupCreate(bot, chatId, messageId);
+        break;
+
+      case 'admin_payment_methods':
+        if (!isAdminUser) break;
+        await handleAdminPaymentMethods(bot, chatId, messageId);
         break;
 
       case 'admin_backup_restore':
@@ -484,6 +490,13 @@ async function handleCallbackData(bot, chatId, messageId, data, user, isAdminUse
       chat_id: chatId, message_id: messageId,
       reply_markup: { inline_keyboard: [[{ text: '\u{1F519} Batal', callback_data: 'admin_servers_0' }]] },
     });
+    return;
+  }
+
+  if (data.startsWith('admin_payment_toggle_')) {
+    if (!isAdminUser) return;
+    const method = data.slice('admin_payment_toggle_'.length);
+    await handleAdminPaymentToggle(bot, chatId, messageId, method);
     return;
   }
 
